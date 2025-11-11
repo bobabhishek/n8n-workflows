@@ -1,0 +1,770 @@
+{
+  "name": "HR agent pre-screening final 0ne",
+  "nodes": [
+    {
+      "parameters": {
+        "inputText": "={{ $json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "Apply",
+              "description": "Contains a job application from a candidate seeking a position at our organization"
+            },
+            {
+              "category": "Doesn't apply",
+              "description": "The candidate is not a job application"
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "=Analyze the email text and identify if it's a job application. Classify as:\n- \"Apply\" if it's a job application\n- \"Doesn't apply\" if it's not a job application\n\nReturn your answer as a simple JSON object with only the category value."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        -176
+      ],
+      "id": "da3c5f8e-649c-4f36-871b-cc3d7e972be5",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1280,
+        -72
+      ],
+      "id": "4c15f531-1e81-4a26-a09d-a594511be46e",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "cwUhR50jUHeEirGF",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a helpful HR assistant. Your goal is to analyze the CV of the candidate and see if the candidate is a good candidate for the position.",
+          "maxIterations": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -1280,
+        360
+      ],
+      "id": "1e465346-b9c9-4cd0-ba5c-4d0434e8ed2f",
+      "name": "AI Agent",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n \"candidate\": {\n   \"first_name\": \"string\",\n   \"last_name\":\"string\",\n   \"email\": \"string\",\n   \"location\": \"string\",\n   \"phone\": \"string\"\n },\n \"summary\": {\n   \"years_experience\": \"number\",\n   \"current_role\": \"string\", \n   \"key_achievements\": [\"string\"],\n   \"technical_skills\": [\"string\"]\n },\n \"fit_score\": {\n   \"overall\": \"number\",\n   \"breakdown\": {\n     \"experience\": \"number\",\n     \"technical_skills\": \"number\", \n     \"achievements\": \"number\",\n     \"education\": \"number\"\n   },\n   \"reasoning\": [\"string\"]\n }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        -1144,
+        584
+      ],
+      "id": "c2bc3307-4c5e-4260-bac4-43d7df688c7a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        24
+      ],
+      "id": "960e2a9d-2250-4145-8058-5767e3481c4c",
+      "name": "Extract from File1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1eRNCbM7F5b-o5AmP9XMpSRIKFQ_Cks4xZO8EowLLJs0",
+          "mode": "list",
+          "cachedResultName": "HR Screening n8n lecture",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eRNCbM7F5b-o5AmP9XMpSRIKFQ_Cks4xZO8EowLLJs0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1eRNCbM7F5b-o5AmP9XMpSRIKFQ_Cks4xZO8EowLLJs0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "CV": "={{ $('Upload Attachment').item.json.webViewLink }}",
+            "First Name": "={{ $json.output.candidate.first_name }}",
+            "Last Name": "={{ $json.output.candidate.last_name }}",
+            "Email": "={{ $json.output.candidate.email }}",
+            "Email content": "={{ $('Gmail Trigger').item.json.text }}",
+            "Summary": "={{ $json.output.summary.years_experience }} of role {{ $json.output.summary.current_role }}",
+            "Scoring": "=Overall Score = {{ $json.output.fit_score.overall }}\nExperience = {{ $json.output.fit_score.breakdown.experience }}\nTechnical = {{ $json.output.fit_score.breakdown.technical_skills }}\nAchievements = {{ $json.output.fit_score.breakdown.achievements }}\nEducation = {{ $json.output.fit_score.breakdown.education }}",
+            "Quick Read": "={{ $json.output.fit_score.reasoning[0] }} {{ $json.output.fit_score.reasoning[1] }} {{ $json.output.fit_score.reasoning[2] }} {{ $json.output.fit_score.reasoning[3] }}"
+          },
+          "matchingColumns": [
+            "CV"
+          ],
+          "schema": [
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email content",
+              "displayName": "Email content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CV",
+              "displayName": "CV",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Scoring",
+              "displayName": "Scoring",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quick Read",
+              "displayName": "Quick Read",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -928,
+        360
+      ],
+      "id": "b3d61fb7-352c-4af1-8e4f-0e619ee15f54",
+      "name": "Google Sheets5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ZTfJ8ytTCAWLfSr2",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "attachment_0",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f080824e-4237-4959-af6a-74b9d9a3c8ea",
+                    "leftValue": "attachment_0",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -704,
+        -72
+      ],
+      "id": "7842bd71-6767-4201-b9a1-2056b57a31a5",
+      "name": "Switch1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -32,
+        -72
+      ],
+      "id": "ecae0224-316d-4dcc-8af5-a4b15fcdce00",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -984,
+        48
+      ],
+      "id": "2adeb557-98a9-441f-aba0-755df6985007",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "koxLQ0p0TX0LE0PA",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1272,
+        584
+      ],
+      "id": "1d2451e2-0988-45c4-8ae1-94241eef23bf",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "koxLQ0p0TX0LE0PA",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1hzcg4VlQuZLjZ_X8sEDJjIPW4C41XQOw",
+          "mode": "list",
+          "cachedResultName": "CV screening",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1hzcg4VlQuZLjZ_X8sEDJjIPW4C41XQOw"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -480,
+        -168
+      ],
+      "id": "62c93acb-76c9-475a-9b8a-7a9c27fca8cf",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "VAyLXd6DoKdWIGfR",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -256,
+        -168
+      ],
+      "id": "feafac5f-0c3a-4374-9c16-27dd05f6d6d7",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "VAyLXd6DoKdWIGfR",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the current information from the received candidate and score between 0 to 10 the said candidate, 0 meaning not a good fit for the position, 10 being outstanding for the job.\n\nThe actual position being open is: Business Development Representative (BDR) Role for Lead Gen Man | Remote/Hybrid\n\nAbout Us  \nfRESH stART UPS\n\nRole Overview  \nWe’re looking for a Sales Development Representative (SDR) who’s hungry to learn, focused on outcomes, and ready to drive pipeline growth. You’ll lead with research, outreach, and qualification to keep discovery calls flowing and calendars full.\n\nThis role is about momentum and execution — not checking boxes.\n\nWhat You’ll Be Doing  \nGenuine interest in AI, Machine Learning, Data Science, Software Engineering, or Testing Automation\n\nAbility to learn quickly and comprehend technical concepts when explained\n\nStrong written and verbal communication skills\n\nCuriosity about how engineering teams operate and where challenges arise\n\nConsistent, organized, and disciplined work habits\n\nSelf-motivated approach with willingness to grow and improve continuously\n\nNo prior industry experience required — training and mentorship are provided\n\nDegree not required; projects, initiative, and effort matter more  \n\nWhat We Offer  \nCompetitive base compensation with performance-based incentives\n\nDirect mentorship from founders and engineering leadership\n\nRemote-first work culture with flexible scheduling\n\nGrowth paths into roles such as:\n\nTechnical Sales / Solutions\n\nProduct Specialist\n\nIndustry Research / Partnerships\n\nOpportunity to build real-world knowledge in applied AI and enterprise engineering environments\n\n\nSee the extracted PDF information: {{ $('Extract from File1').item.json.text }}\n\nProvide some key insight on why this candidate is a good fit for the position as well",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a helpful HR assistant. Your goal is to analyze the CV of the candidate and see if the candidate is a good candidate for the position"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        192,
+        -72
+      ],
+      "id": "13d23ab9-a01f-412b-9d4f-1a60eb363429",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        200,
+        152
+      ],
+      "id": "291a40f2-b0ad-472a-a35d-13c324a45ff9",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "koxLQ0p0TX0LE0PA",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n \"candidate\": {\n   \"first_name\": \"string\",\n   \"last_name\":\"string\",\n   \"email\": \"string\",\n   \"location\": \"string\",\n   \"phone\": \"string\"\n },\n \"summary\": {\n   \"years_experience\": \"number\",\n   \"current_role\": \"string\", \n   \"key_achievements\": [\"string\"],\n   \"technical_skills\": [\"string\"]\n },\n \"fit_score\": {\n   \"overall\": \"number\",\n   \"breakdown\": {\n     \"experience\": \"number\",\n     \"technical_skills\": \"number\", \n     \"achievements\": \"number\",\n     \"education\": \"number\"\n   },\n   \"reasoning\": [\"string\"]\n }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        160
+      ],
+      "id": "b101acbf-4a62-4abd-80d1-2aa4d0211c73",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14KnQfFGTmEOvIdvRWxnjvoBTcHO6D7rxAzj5-TrAJlc",
+          "mode": "list",
+          "cachedResultName": "HR Screening",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14KnQfFGTmEOvIdvRWxnjvoBTcHO6D7rxAzj5-TrAJlc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14KnQfFGTmEOvIdvRWxnjvoBTcHO6D7rxAzj5-TrAJlc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "First Name": "={{ $json.output.candidate.first_name }}",
+            "Last Name": "={{ $json.output.candidate.last_name }}",
+            "Email": "={{ $json.output.candidate.email }}",
+            "Email Content": "={{ $('Text Classifier').item.json.text }}",
+            "Summary": "={{ $json.output.summary }}",
+            "Scoring ": "=overall:{{ $json.output.fit_score.overall }}",
+            "QuicK Read": "={{ $json.output.fit_score.breakdown.education }}",
+            "CV": "={{ $('Upload file').item.json.webViewLink }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Content",
+              "displayName": "Email Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CV",
+              "displayName": "CV",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Scoring ",
+              "displayName": "Scoring ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "QuicK Read",
+              "displayName": "QuicK Read",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        544,
+        -72
+      ],
+      "id": "2002a919-2b5b-4bd4-a0d3-9327374320c0",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ZTfJ8ytTCAWLfSr2",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File1": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "085e4f52-d751-405e-8bf1-63fa450d5141",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "318e3d88ddf085d083a321b3e416c7a1e3f484af9be58bfa7c268efbcebab7b2"
+  },
+  "id": "knV3E5a0NMEetDV0",
+  "tags": []
+}
